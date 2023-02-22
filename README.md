@@ -32,7 +32,7 @@ The default example can be invoked without arguments:
 
 Or you can optionally pass a query string to customize the 'hello' message:
 
-    $ curl 'http://localhost:8080/?Wazero!'
+    $ curl 'http://localhost:8080/?name=Wazero!'
     Hello Wazero!
 
 [wagi]: https://github.com/deislabs/wagi/
