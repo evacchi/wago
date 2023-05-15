@@ -4,12 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"github.com/evacchi/wago/wazerox"
-	"github.com/tetratelabs/wazero"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/tetratelabs/wazero/sys"
+
+	"github.com/evacchi/wago/wazerox"
+	"github.com/tetratelabs/wazero"
 )
 
 // A WagiSession is an HTTP session exposed as an io.ReadWriter
@@ -81,7 +85,7 @@ func NewWagiSession(response http.ResponseWriter, request *http.Request, module 
 
 // Write implements io.Writer
 func (w *wagiWriter) Write(b []byte) (int, error) {
-	if w.headersNewlines > 2 {
+	if w.headersNewlines >= 2 {
 		write, err := w.w.Write(b)
 		return write, err
 	}
@@ -104,7 +108,7 @@ func (w *wagiWriter) Write(b []byte) (int, error) {
 			n += n1 + 1
 		} else {
 			// reset the new line counter: must be >= 2 consecutive
-			w.headersNewlines = 0
+			w.headersNewlines = 1
 			// otherwise "parse" the headers
 			// split over : and cleanup any extra space
 			ss := strings.Split(t, ":")
@@ -131,7 +135,7 @@ func (w *wagiSession) Evaluate() (err error) {
 	wconf := wazero.NewModuleConfig().
 		WithStdout(w).
 		WithStdin(w).
-		WithStartFunctions("_start").
+		//WithStartFunctions("_start").
 		WithArgs(args...)
 
 	for k, v := range w.env {
@@ -140,6 +144,12 @@ func (w *wagiSession) Evaluate() (err error) {
 
 	ctx := context.Background()
 	m, err := w.module.Instantiate(ctx, wconf)
+	var ee sys.ExitError
+	if errors.Is(err, &ee) {
+		if ee.ExitCode() == 0 {
+			err = nil
+		}
+	}
 	m.Close(ctx)
 	if err != nil {
 		return err
